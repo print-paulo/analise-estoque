@@ -7,6 +7,8 @@ from __future__ import annotations
 
 import pandas as pd
 
+from data_loader import extrair_codigo_maquina
+
 
 def ranking_por_quantidade(df_saidas: pd.DataFrame) -> pd.DataFrame:
     """
@@ -41,7 +43,9 @@ def top_n(ranking: pd.DataFrame, n: int = 10) -> pd.DataFrame:
 
 
 def ranking_por_maquina(
-    df_saidas: pd.DataFrame, excluir: list[str] | None = None
+    df_saidas: pd.DataFrame,
+    excluir: list[str] | None = None,
+    mapa_nomes: dict[str, str] | None = None,
 ) -> pd.DataFrame:
     """
     Agrupa as saídas pela coluna "destino" (ex.: "P / RE-454",
@@ -51,6 +55,11 @@ def ranking_por_maquina(
     `excluir` permite remover destinos que não representam uma
     máquina de verdade (ex.: "P / OFICINA", "P / ITATIBA"), que
     costumam aparecer no topo só por serem destinos genéricos.
+
+    `mapa_nomes` (opcional) é o dicionário {código: nome/modelo} vindo
+    de `data_loader.carregar_mapa_maquinas`; quando informado, o
+    ranking ganha uma coluna "nome_maquina" com o nome/modelo da
+    máquina (quando não encontrado, fica como "(não identificada)").
     """
     if "destino" not in df_saidas.columns:
         raise ValueError("A planilha não tem a coluna DESTINO.")
@@ -74,6 +83,12 @@ def ranking_por_maquina(
         .sort_values("quantidade_total", ascending=False)
         .reset_index(drop=True)
     )
+
+    if mapa_nomes:
+        agrupado["nome_maquina"] = agrupado["destino"].apply(
+            lambda destino: mapa_nomes.get(extrair_codigo_maquina(destino), "(não identificada)")
+        )
+
     return agrupado
 
 

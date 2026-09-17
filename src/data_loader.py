@@ -9,9 +9,16 @@ valor unitário e data.
 
 from __future__ import annotations
 
+import re
+
 import pandas as pd
 
 ABA_SAIDAS = "SAÍDAS"
+ABA_ESTOQUE = "ESTOQUE"
+
+# Reconhece descrições da aba ESTOQUE que começam com o código da máquina,
+# ex.: "TE-310 TRATOR DE ESTEIRA CATERPILLAR D6" -> código "TE-310"
+PADRAO_CODIGO_MAQUINA = re.compile(r"^([A-Z]{1,4}-\d+)\s+(.+)$")
 
 COLUNAS_ESPERADAS = {
     "CÓDIGO": "codigo",
@@ -56,3 +63,40 @@ def carregar_saidas(caminho_planilha: str) -> pd.DataFrame:
     df["descricao"] = df["descricao"].astype(str).str.strip()
 
     return df.reset_index(drop=True)
+
+
+def carregar_mapa_maquinas(caminho_planilha: str) -> dict[str, str]:
+    """
+    Lê a aba ESTOQUE e monta um dicionário {código da máquina: nome/modelo},
+    a partir dos itens de patrimônio (código "IMO.*") cuja descrição começa
+    com o código da máquina, ex.:
+
+        "TE-310 TRATOR DE ESTEIRA CATERPILLAR D6" -> {"TE-310": "TRATOR DE ESTEIRA CATERPILLAR D6"}
+
+    Nem toda máquina que aparece na coluna DESTINO das saídas está
+    cadastrada como patrimônio na aba ESTOQUE (ex.: alguns caminhões),
+    então o mapa retornado pode não cobrir 100% dos códigos.
+    """
+    df = pd.read_excel(caminho_planilha, sheet_name=ABA_ESTOQUE)
+
+    mapa: dict[str, str] = {}
+    for codigo, descricao in zip(df.get("CÓDIGO", []), df.get("DESCRIÇÃO", [])):
+        if not isinstance(codigo, str) or not codigo.upper().startswith("IMO"):
+            continue
+        if not isinstance(descricao, str):
+            continue
+
+        casamento = PADRAO_CODIGO_MAQUINA.match(descricao.strip())
+        if casamento:
+            codigo_maquina, nome_maquina = casamento.groups()
+            mapa[codigo_maquina] = nome_maquina.strip()
+
+    return mapa
+
+
+def extrair_codigo_maquina(destino: str) -> str:
+    """
+    Extrai o código da máquina a partir do texto da coluna DESTINO,
+    ex.: "P / TE-310" -> "TE-310".
+    """
+    return destino.split("/")[-1].strip()

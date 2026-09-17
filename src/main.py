@@ -10,7 +10,7 @@ from __future__ import annotations
 import argparse
 import sys
 
-from data_loader import carregar_saidas
+from data_loader import carregar_saidas, carregar_mapa_maquinas
 from analysis import (
     ranking_por_quantidade,
     peca_mais_utilizada,
@@ -63,16 +63,18 @@ def imprimir_ranking_maquinas(ranking_maquinas, n: int) -> None:
     principais = top_n(ranking_maquinas, n)
     print(f"\n=== TOP {n} MÁQUINAS/VEÍCULOS QUE MAIS CONSOMEM PEÇAS ===\n")
     for i, linha in principais.iterrows():
+        nome = f" — {linha['nome_maquina']}" if "nome_maquina" in linha else ""
         print(
-            f"{i + 1:>2}. {linha['destino']}\n"
+            f"{i + 1:>2}. {linha['destino']}{nome}\n"
             f"     Quantidade total: {linha['quantidade_total']:.0f}"
             f" | Nº de retiradas: {linha['numero_retiradas']}"
             f" | Valor total: R$ {linha['valor_total']:.2f}"
         )
 
     campea = maquina_com_mais_saida(ranking_maquinas)
+    nome_campea = f" — {campea['nome_maquina']}" if "nome_maquina" in campea else ""
     print("\n>>> Máquina/veículo com mais saída de peças:")
-    print(f"    {campea['destino']} — {campea['quantidade_total']:.0f} unidades")
+    print(f"    {campea['destino']}{nome_campea} — {campea['quantidade_total']:.0f} unidades")
 
 
 def gerar_grafico(ranking, n: int, caminho: str) -> None:
@@ -110,7 +112,8 @@ def main() -> None:
 
     if args.maquinas:
         excluir = None if args.incluir_genericos else DESTINOS_GENERICOS_PADRAO
-        ranking_maquinas = ranking_por_maquina(df_saidas, excluir=excluir)
+        mapa_nomes = carregar_mapa_maquinas(args.planilha)
+        ranking_maquinas = ranking_por_maquina(df_saidas, excluir=excluir, mapa_nomes=mapa_nomes)
         imprimir_ranking_maquinas(ranking_maquinas, args.top)
 
 
