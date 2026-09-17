@@ -6,3 +6,4 @@ data/*.xlsx
 *.csv
 *.png
 .DS_Store
+*.xlsx  
