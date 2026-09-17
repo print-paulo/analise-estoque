@@ -1,7 +1,6 @@
 # Análise de Estoque
 
-Programa em Python que analisa a planilha de controle de estoque
-(`CONTROLE_DE_ESTOQUE_GRAM_PAV.xlsx`) e identifica quais peças mais saem
+Programa em Python que analisa a planilha de controle de estoque e identifica quais peças mais saem
 do estoque (mais utilizadas/vendidas), a partir da aba **SAÍDAS**.
 
 ## Estrutura do projeto
