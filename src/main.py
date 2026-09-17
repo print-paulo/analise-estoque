@@ -11,7 +11,15 @@ import argparse
 import sys
 
 from data_loader import carregar_saidas
-from analysis import ranking_por_quantidade, peca_mais_utilizada, top_n
+from analysis import (
+    ranking_por_quantidade,
+    peca_mais_utilizada,
+    top_n,
+    ranking_por_maquina,
+    maquina_com_mais_saida,
+)
+
+DESTINOS_GENERICOS_PADRAO = ["P / OFICINA", "P / ITATIBA"]
 
 
 def parse_args() -> argparse.Namespace:
@@ -22,6 +30,16 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--top", type=int, default=10, help="Quantidade de peças no ranking (padrão: 10)")
     parser.add_argument("--csv", help="Caminho para salvar o ranking completo em CSV")
     parser.add_argument("--grafico", help="Caminho para salvar um gráfico de barras com o Top N")
+    parser.add_argument(
+        "--maquinas",
+        action="store_true",
+        help="Também mostra o ranking de máquinas/veículos que mais consomem peças (coluna DESTINO)",
+    )
+    parser.add_argument(
+        "--incluir-genericos",
+        action="store_true",
+        help=f"Não exclui destinos genéricos do ranking de máquinas (por padrão são excluídos: {DESTINOS_GENERICOS_PADRAO})",
+    )
     return parser.parse_args()
 
 
@@ -39,6 +57,22 @@ def imprimir_ranking(ranking, n: int) -> None:
     campea = peca_mais_utilizada(ranking)
     print("\n>>> Peça campeã de saída:")
     print(f"    [{campea['codigo']}] {campea['descricao']} — {campea['quantidade_total']:.0f} unidades")
+
+
+def imprimir_ranking_maquinas(ranking_maquinas, n: int) -> None:
+    principais = top_n(ranking_maquinas, n)
+    print(f"\n=== TOP {n} MÁQUINAS/VEÍCULOS QUE MAIS CONSOMEM PEÇAS ===\n")
+    for i, linha in principais.iterrows():
+        print(
+            f"{i + 1:>2}. {linha['destino']}\n"
+            f"     Quantidade total: {linha['quantidade_total']:.0f}"
+            f" | Nº de retiradas: {linha['numero_retiradas']}"
+            f" | Valor total: R$ {linha['valor_total']:.2f}"
+        )
+
+    campea = maquina_com_mais_saida(ranking_maquinas)
+    print("\n>>> Máquina/veículo com mais saída de peças:")
+    print(f"    {campea['destino']} — {campea['quantidade_total']:.0f} unidades")
 
 
 def gerar_grafico(ranking, n: int, caminho: str) -> None:
@@ -73,6 +107,11 @@ def main() -> None:
 
     if args.grafico:
         gerar_grafico(ranking, args.top, args.grafico)
+
+    if args.maquinas:
+        excluir = None if args.incluir_genericos else DESTINOS_GENERICOS_PADRAO
+        ranking_maquinas = ranking_por_maquina(df_saidas, excluir=excluir)
+        imprimir_ranking_maquinas(ranking_maquinas, args.top)
 
 
 if __name__ == "__main__":
